@@ -1,0 +1,19 @@
+{
+  "name": "Daily Language Dashboard",
+  "short_name": "DailyLang",
+  "description": "Curated polyglot daily lexicon with 300-day zero-repeat curriculum and spaced repetition.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#121212",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%231a1a1a'/><text y='68' font-size='56' x='50' text-anchor='middle' fill='%237c4dff'>☵</text></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
