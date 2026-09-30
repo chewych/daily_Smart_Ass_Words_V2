@@ -1,6 +1,7 @@
 import os
 import json
 import datetime
+import time
 from google import genai
 from google.genai import types
 
@@ -13,6 +14,7 @@ def get_coprime_permutation_index(day_num, pool_size=300):
     # gcd(137, 300) = 1 guarantees a full 300-day cycle without repeats
     return (day_num * 137 + 43) % pool_size
 
+# Load the curriculum data
 with open("data/curriculum.json", "r", encoding="utf-8") as f:
     curriculum = json.load(f)
 
@@ -46,22 +48,44 @@ Respond strictly in valid JSON matching this schema:
 """
 
 client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-response = client.models.generate_content(
-    model="gemini-3.8-flash",
-    contents=prompt,
-    config=types.GenerateContentConfig(
-        response_mime_type="application/json",
-        temperature=0.3
-    )
-)
 
-output_data = json.loads(response.text)
-output_data["date"] = NOW.strftime("%Y-%m-%d")
-output_data["dayNumber"] = CYCLE_INDEX + 1
-output_data["cycleIndex"] = CYCLE_INDEX
-output_data["terms"] = [today_phrase['w'], today_french['w'], today_yiddish['w'], today_latin['w']]
+response = None
+max_retries = 4
 
-with open("data/daily_theme.json", "w", encoding="utf-8") as f:
-    json.dump(output_data, f, indent=2, ensure_ascii=False)
+for attempt in range(max_retries):
+    try:
+        print(f"Calling Gemini API (attempt {attempt + 1} of {max_retries})...")
+        response = client.models.generate_content(
+            model="gemini-3.8-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.3
+            )
+        )
+        print("Successfully received synthesis from Gemini.")
+        break
+    except Exception as e:
+        print(f"Attempt {attempt + 1} encountered error: {e}")
+        if attempt < max_retries - 1:
+            wait_seconds = (attempt + 1) * 8
+            print(f"Waiting {wait_seconds} seconds before retrying...")
+            time.sleep(wait_seconds)
+        else:
+            print("Transient capacity issue persists. Preserving baseline theme so curriculum deployment completes.")
 
-print(f"Generated Day {CYCLE_INDEX + 1}/300 Theme: {output_data['themeTitle']}")
+if response and response.text:
+    try:
+        output_data = json.loads(response.text)
+        output_data["date"] = NOW.strftime("%Y-%m-%d")
+        output_data["dayNumber"] = CYCLE_INDEX + 1
+        output_data["cycleIndex"] = CYCLE_INDEX
+        output_data["terms"] = [today_phrase['w'], today_french['w'], today_yiddish['w'], today_latin['w']]
+
+        with open("data/daily_theme.json", "w", encoding="utf-8") as f:
+            json.dump(output_data, f, indent=2, ensure_ascii=False)
+        print(f"Updated data/daily_theme.json with theme: {output_data.get('themeTitle')}")
+    except Exception as parse_err:
+        print(f"Could not parse Gemini JSON response: {parse_err}. Keeping baseline theme.")
+else:
+    print("Continuing with existing baseline theme for today.")
