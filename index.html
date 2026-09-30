@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Daily Language Dashboard</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#121212">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="DailyLang">
+
+  <style>
+    :root {
+      --bg-canvas: #121212;
+      --bg-panel: #1a1a1a;
+      --bg-card: #242424;
+      --bg-card-hover: #2d2d2d;
+      --accent-violet: #7c4dff;
+      --accent-violet-glow: rgba(124, 77, 255, 0.28);
+      --accent-violet-light: #b388ff;
+      --accent-gold: #ffd700;
+      --accent-gold-glow: rgba(255, 215, 0, 0.25);
+      --text-main: #f0f0f0;
+      --text-muted: #a0a0a0;
+      --text-sub: #757575;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-accent: rgba(124, 77, 255, 0.35);
+      --correct: #00e676;
+      --correct-bg: rgba(0, 230, 118, 0.12);
+      --wrong: #ff5252;
+      --wrong-bg: rgba(255, 82, 82, 0.12);
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-canvas);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 12px 10px 32px 10px;
+      overflow-x: hidden;
+    }
+
+    .app-viewport {
+      width: 100%;
+      max-width: 520px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Top Audio & Quick Stats Bar */
+    .audio-banner {
+      background: linear-gradient(135deg, rgba(124, 77, 255, 0.18), rgba(30, 30, 30, 0.95));
+      border: 1px solid var(--border-accent);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .audio-banner-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+    .audio-banner-info span { font-size: 17px; }
+    .banner-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .banner-btn {
+      background: var(--accent-violet);
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .banner-btn.initialized {
+      background: #2e7d32;
+      pointer-events: none;
+    }
+    .bookmark-counter-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--accent-gold);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Thematic Prologue Card */
+    .theme-prologue-card {
+      background: linear-gradient(145deg, rgba(124, 77, 255, 0.15), rgba(26, 26, 26, 0.95));
+      border: 1px solid var(--border-accent);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35);
+    }
+    .theme-badge-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .theme-pill-tag {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--accent-violet-light);
+      background: rgba(124, 77, 255, 0.2);
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+    .theme-author-tag {
+      font-size: 11px;
+      color: var(--accent-gold);
+      font-weight: 600;
+    }
+    .theme-title-text {
+      font-size: 15px;
+      font-weight: 800;
+      color: #ffffff;
+    }
+    .theme-analysis-text {
+      font-size: 12px;
+      color: #d1d1d1;
+      line-height: 1.4;
+    }
+    .theme-quote-box {
+      background: rgba(0, 0, 0, 0.35);
+      border-left: 3px solid var(--accent-gold);
+      padding: 8px 12px;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .theme-quote-text {
+      font-size: 12.5px;
+      font-style: italic;
+      color: #f5f5f5;
+      line-height: 1.35;
+    }
+    .theme-citation {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-align: right;
+    }
+
+    /* Date Header Controls */
+    .top-bar {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .date-meta {
+      display: flex;
+      flex-direction: column;
+    }
+    .date-title {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    .date-sub {
+      font-size: 11px;
+      color: var(--accent-violet-light);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-top: 1px;
+    }
+    .date-nav {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .nav-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* Deck Switcher Tabs */
+    .slide-progress-bar {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      background: var(--bg-panel);
+      padding: 6px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+    }
+    .progress-pill {
+      background: var(--bg-card);
+      border: 1px solid transparent;
+      padding: 7px 2px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      text-align: center;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      transition: all 0.2s ease;
+    }
+    .progress-pill.active {
+      background: var(--accent-violet);
+      color: #ffffff;
+      border-color: var(--accent-violet-light);
+      box-shadow: 0 0 10px var(--accent-violet-glow);
+    }
+
+    /* Slider Container */
+    .slider-viewport {
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--radius-lg);
+      background: var(--bg-panel);
+      border: 1px solid var(--border-subtle);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+      touch-action: pan-y;
+    }
+    .slider-track {
+      display: flex;
+      width: 500%;
+      transform: translateX(0%);
+      transition: transform 0.35s cubic-bezier(0.2, 0.85, 0.3, 1);
+    }
+    .deck-slide {
+      width: 20%;
+      padding: 16px 16px 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-height: 580px;
+    }
+
+    /* Word Card Core Structure */
+    .card-badge-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 8px;
+    }
+    .badge-category {
+      background: rgba(124, 77, 255, 0.15);
+      color: var(--accent-violet-light);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid var(--border-accent);
+    }
+    .card-actions-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .star-btn {
+      background: transparent;
+      border: none;
+      font-size: 20px;
+      color: var(--text-sub);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.15s ease, color 0.15s ease;
+    }
+    .star-btn.bookmarked {
+      color: var(--accent-gold);
+      transform: scale(1.1);
+      filter: drop-shadow(0 0 6px var(--accent-gold-glow));
+    }
+    .slide-step-tag {
+      font-size: 11px;
+      color: var(--text-sub);
+      font-weight: 600;
+    }
+    .term-headline-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .term-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .term-primary {
+      font-size: 24px;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1.2;
+    }
+    .term-original-script {
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--accent-violet-light);
+      margin-left: 6px;
+    }
+    .speak-btn {
+      background: var(--accent-violet);
+      border: none;
+      color: #fff;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      cursor: pointer;
+      box-shadow: 0 0 10px var(--accent-violet-glow);
+    }
+    .ipa-pill {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text-muted);
+      font-size: 12px;
+      padding: 3px 8px;
+      border-radius: 20px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Definition Blocks */
+    .definition-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .def-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      border-left: 3px solid var(--accent-violet);
+    }
+    .def-card.english {
+      border-left-color: #00bcd4;
+    }
+    .def-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+    .def-text {
+      font-size: 13px;
+      color: var(--text-main);
+      line-height: 1.4;
+    }
+
+    /* Semantic Shift Block */
+    .semantic-card {
+      background: linear-gradient(145deg, rgba(124, 77, 255, 0.08), rgba(36, 36, 36, 0.95));
+      border: 1px solid var(--border-accent);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .semantic-heading {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--accent-violet-light);
+    }
+    .semantic-body {
+      font-size: 12.5px;
+      color: #e0e0e0;
+      line-height: 1.45;
+    }
+
+    /* Vertical Lineage */
+    .lineage-wrapper {
+      background: var(--bg-card);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .lineage-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+    }
+    .vertical-timeline {
+      position: relative;
+      padding-left: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .vertical-timeline::before {
+      content: '';
+      position: absolute;
+      left: 6px;
+      top: 4px;
+      bottom: 4px;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--accent-violet), rgba(124, 77, 255, 0.2));
+    }
+    .timeline-node {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .timeline-node::before {
+      content: '';
+      position: absolute;
+      left: -18px;
+      top: 3px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-violet);
+      border: 2px solid var(--bg-panel);
+    }
+    .node-stage {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--accent-violet-light);
+      text-transform: uppercase;
+    }
+    .node-form {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+
+    .deck-nav-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: auto;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .deck-arrow-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .deck-arrow-btn.primary {
+      background: var(--accent-violet);
+      color: #fff;
+      border-color: var(--accent-violet);
+    }
+
+    /* Quiz Module */
+    .quiz-container {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      height: 100%;
+    }
+    .quiz-intro-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-accent);
+      border-radius: var(--radius-md);
+      padding: 20px 16px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .quiz-badge-big {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: rgba(124, 77, 255, 0.2);
+      border: 1px solid var(--accent-violet);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: var(--accent-violet-light);
+    }
+    .quiz-intro-title { font-size: 20px; font-weight: 800; color: #fff; }
+    .quiz-intro-desc { font-size: 13px; color: var(--text-muted); line-height: 1.45; }
+    .decay-legend {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 10px;
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      text-align: center;
+    }
+    .decay-w { font-size: 12px; font-weight: 700; color: var(--accent-violet-light); }
+    .decay-t { font-size: 9px; color: var(--text-sub); text-transform: uppercase; }
+    .bookmark-weight-pill {
+      background: rgba(255, 215, 0, 0.12);
+      border: 1px solid rgba(255, 215, 0, 0.4);
+      color: var(--accent-gold);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .quiz-start-btn {
+      background: var(--accent-violet);
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+      box-shadow: 0 4px 15px var(--accent-violet-glow);
+    }
+
+    .quiz-active-card {
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .quiz-header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 8px;
+    }
+    .q-step { font-size: 12px; font-weight: 700; color: var(--accent-violet-light); }
+    .q-score { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+    .q-badges-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .q-type-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .q-star-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(255, 215, 0, 0.15);
+      border: 1px solid rgba(255, 215, 0, 0.4);
+      color: var(--accent-gold);
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .q-prompt-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .q-prompt-text { font-size: 15px; font-weight: 700; color: #ffffff; line-height: 1.4; }
+    .q-audio-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(124, 77, 255, 0.12);
+      border: 1px solid var(--border-accent);
+      padding: 8px 12px;
+      border-radius: 8px;
+    }
+    .q-audio-btn {
+      background: var(--accent-violet);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      cursor: pointer;
+    }
+    .q-options-list { display: flex; flex-direction: column; gap: 8px; }
+    .q-opt {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 11px 14px;
+      font-size: 13px;
+      color: var(--text-main);
+      text-align: left;
+      cursor: pointer;
+      line-height: 1.35;
+    }
+    .q-opt.correct {
+      background: var(--correct-bg) !important;
+      border-color: var(--correct) !important;
+      color: #fff !important;
+      font-weight: 600;
+    }
+    .q-opt.wrong {
+      background: var(--wrong-bg) !important;
+      border-color: var(--wrong) !important;
+      color: #ff8a80 !important;
+    }
+    .q-opt.locked { pointer-events: none; }
+    .q-feedback {
+      display: none;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+      border-left: 3px solid var(--accent-violet);
+    }
+    .q-next-btn {
+      display: none;
+      background: var(--accent-violet);
+      color: #fff;
+      border: none;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .quiz-summary-card {
+      display: none;
+      background: var(--bg-card);
+      border: 1px solid var(--border-accent);
+      border-radius: var(--radius-md);
+      padding: 18px 14px;
+      text-align: center;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .summary-score-large { font-size: 34px; font-weight: 800; color: #fff; }
+    .summary-tier { font-size: 14px; font-weight: 700; color: var(--accent-violet-light); text-transform: uppercase; }
+
+    /* Modals & Bookmarks Drawer */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal-sheet {
+      background: var(--bg-panel);
+      border-top: 1px solid var(--border-accent);
+      border-radius: 20px 20px 0 0;
+      width: 100%;
+      max-width: 520px;
+      max-height: 82vh;
+      overflow-y: auto;
+      padding: 20px 18px 30px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .sheet-header { display: flex; align-items: center; justify-content: space-between; }
+    .sheet-title { font-size: 16px; font-weight: 700; color: #fff; }
+    .sheet-close-btn {
+      background: var(--bg-card);
+      border: none;
+      color: var(--text-muted);
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    .syllable-list { display: flex; flex-direction: column; gap: 10px; }
+    .syllable-card {
+      background: var(--bg-card);
+      border-radius: 8px;
+      padding: 10px 12px;
+      border-left: 3px solid var(--accent-violet);
+    }
+    .syl-text { font-size: 13px; font-weight: 700; color: #fff; }
+    .syl-ipa { font-size: 11px; color: var(--accent-violet-light); }
+    .syl-mouth { font-size: 12px; color: var(--text-muted); line-height: 1.35; }
+
+    .repo-item-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .repo-item-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .repo-item-word {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .repo-item-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .repo-speak-sm {
+      background: var(--accent-violet);
+      border: none;
+      color: #fff;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .repo-trash-btn {
+      background: transparent;
+      border: none;
+      color: var(--wrong);
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .repo-def {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-viewport">
+  
+  <div class="audio-banner">
+    <div class="audio-banner-info">
+      <span>🔊</span>
+      <div>
+        <div style="font-weight: 700;">Native Audio & Haptics</div>
+        <div style="font-size: 11px; color: var(--text-muted);" id="streakBannerText">Daily Streak: 1 day</div>
+      </div>
+    </div>
+    <div class="banner-actions">
+      <button class="bookmark-counter-btn" onclick="openBookmarkRepository()">
+        <span>⭐</span> <span id="savedCountBadge">0</span>
+      </button>
+      <button class="banner-btn" id="initAudioBtn" onclick="initNativeAudio()">Initialize Audio</button>
+    </div>
+  </div>
+
+  <div class="theme-prologue-card" id="dailyThemeCard">
+    <div class="theme-badge-row">
+      <span class="theme-pill-tag">Daily Philosophical Axis</span>
+      <span class="theme-author-tag" id="themeAuthorDisplay">Marcus Aurelius</span>
+    </div>
+    <div class="theme-title-text" id="themeTitleDisplay">The Irrevocable Threshold</div>
+    <div class="theme-analysis-text" id="themeAnalysisDisplay">
+      Confronting decisive moments requires surrendering hesitation and accepting that every irreversible choice is framed by our fleeting mortality.
+    </div>
+    <div class="theme-quote-box">
+      <div class="theme-quote-text" id="themeQuoteDisplay">
+        "Never let the future disturb you. You will meet it, if you have to, with the same weapons of reason which today arm you against the present."
+      </div>
+      <div class="theme-citation" id="themeCitationDisplay">— Marcus Aurelius, Meditations</div>
+    </div>
+  </div>
+
+  <div class="top-bar">
+    <div class="date-meta">
+      <span class="date-title" id="dateDisplay">Loading...</span>
+      <span class="date-sub" id="cycleDisplay">300-Day Word Bank</span>
+    </div>
+    <div class="date-nav">
+      <button class="nav-btn" onclick="stepDay(-1)">◀</button>
+      <button class="nav-btn" onclick="jumpToday()">Today</button>
+      <button class="nav-btn" onclick="stepDay(1)">▶</button>
+    </div>
+  </div>
+
+  <div class="slide-progress-bar">
+    <div class="progress-pill active" onclick="goToSlide(0)"><span>🏛️</span><span>Phrase</span></div>
+    <div class="progress-pill" onclick="goToSlide(1)"><span>🍷</span><span>French</span></div>
+    <div class="progress-pill" onclick="goToSlide(2)"><span>🥯</span><span>Yiddish</span></div>
+    <div class="progress-pill" onclick="goToSlide(3)"><span>📜</span><span>Latin</span></div>
+    <div class="progress-pill" onclick="goToSlide(4)"><span>🎯</span><span>Quiz</span></div>
+  </div>
+
+  <div class="slider-viewport" id="sliderViewport">
+    <div class="slider-track" id="sliderTrack">
+      <div class="deck-slide" id="slide0"></div>
+      <div class="deck-slide" id="slide1"></div>
+      <div class="deck-slide" id="slide2"></div>
+      <div class="deck-slide" id="slide3"></div>
+      <div class="deck-slide" id="slide4">
+        <div class="quiz-container">
+          <div class="quiz-intro-card" id="quizIntroCard">
+            <div class="quiz-badge-big">🎯</div>
+            <h3 class="quiz-intro-title">Are You Ready to Quiz?</h3>
+            <p class="quiz-intro-desc">
+              Master the compounding <strong>30-day curriculum</strong>. Questions emphasize 3-to-4 week-old terms and <strong>strongly prioritize your bookmarked items</strong>.
+            </p>
+            <div class="decay-legend">
+              <div><div class="decay-w">40%</div><div class="decay-t">4 Wks Ago</div></div>
+              <div><div class="decay-w">30%</div><div class="decay-t">3 Wks Ago</div></div>
+              <div><div class="decay-w">20%</div><div class="decay-t">2 Wks Ago</div></div>
+              <div><div class="decay-w">10%</div><div class="decay-t">This Wk</div></div>
+            </div>
+            <div class="bookmark-weight-pill">
+              <span>⭐</span> Starred Words: 6× Priority Weight Multiplier
+            </div>
+            <button class="quiz-start-btn" onclick="startCompoundingQuiz()">Begin 25-Question Check</button>
+          </div>
+
+          <div class="quiz-active-card" id="quizActiveCard">
+            <div class="quiz-header-bar">
+              <span class="q-step" id="quizProgressNum">Question 1 of 25</span>
+              <span class="q-score" id="quizScoreNum">Score: 0 / 0</span>
+            </div>
+            <div class="q-badges-row">
+              <div class="q-type-badge" id="quizTypeBadge"><span>🎧</span> Audio Recognition</div>
+              <div class="q-star-badge" id="quizStarBadge" style="display: none;"><span>⭐</span> Starred Focus</div>
+            </div>
+            <div class="q-prompt-box">
+              <div class="q-prompt-text" id="quizPromptText">Prompt</div>
+              <div class="q-audio-box" id="quizAudioWrapper" style="display: none;">
+                <button class="q-audio-btn" id="quizPlayAudioBtn">▶</button>
+                <span style="font-size: 12px; color: #fff;">Play Pronunciation</span>
+              </div>
+            </div>
+            <div class="q-options-list" id="quizOptionsList"></div>
+            <div class="q-feedback" id="quizFeedbackBox"></div>
+            <button class="q-next-btn" id="quizNextBtn" onclick="nextQuizQuestion()">Next Question ➔</button>
+          </div>
+
+          <div class="quiz-summary-card" id="quizSummaryCard">
+            <div class="quiz-badge-big">🏆</div>
+            <div class="summary-score-large" id="summaryScore">0 / 25</div>
+            <div class="summary-tier" id="summaryTier">Polyglot Scholar</div>
+            <p class="summary-breakdown" id="summaryBreakdown"></p>
+            <button class="quiz-start-btn" onclick="startCompoundingQuiz()" style="margin-top: 10px;">Retake New 25-Question Check</button>
+            <button class="nav-btn" onclick="goToSlide(0)" style="width: 100%; padding: 10px;">Review Today's Cards</button>
+          </div>
+
+          <div class="deck-nav-footer">
+            <button class="deck-arrow-btn" onclick="goToSlide(3)">◀ Latin Word</button>
+            <button class="deck-arrow-btn" onclick="goToSlide(0)">First Card ↺</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="modal-overlay" id="mouthingsModal" onclick="closeModal(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="sheet-header">
+      <div class="sheet-title" id="modalTermTitle">Syllable Articulation</div>
+      <button class="sheet-close-btn" onclick="closeModal()">✕</button>
+    </div>
+    <div class="syllable-list" id="modalSyllableList"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="bookmarksModal" onclick="closeModal(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="sheet-header">
+      <div class="sheet-title">⭐ Bookmarked Vocabulary Repository</div>
+      <button class="sheet-close-btn" onclick="closeModal()">✕</button>
+    </div>
+    <p style="font-size: 12px; color: var(--text-muted); margin-top: -6px;">
+      Saved items gain a <strong>6× priority weight</strong> in daily quizzes.
+    </p>
+    <div id="repoItemsContainer" style="display: flex; flex-direction: column; gap: 8px;"></div>
+  </div>
+</div>
+
+<script>
+  /* ---------------------------------------------------------
+     1. HAPTIC & PERSISTENCE ENGINE
+     --------------------------------------------------------- */
+  function triggerHaptic(type) {
+    if (!('vibrate' in navigator)) return;
+    if (type === 'tap') navigator.vibrate(15);
+    else if (type === 'bookmark') navigator.vibrate([25, 30, 25]);
+    else if (type === 'success') navigator.vibrate([20, 40, 20]);
+    else if (type === 'error') navigator.vibrate([40, 60, 40]);
+  }
+
+  function getBookmarkedWords() {
+    try {
+      return JSON.parse(localStorage.getItem('bookmarked_words') || '[]');
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function isBookmarked(wordKey) {
+    return getBookmarkedWords().includes(wordKey);
+  }
+
+  function toggleBookmark(wordKey) {
+    triggerHaptic('bookmark');
+    let list = getBookmarkedWords();
+    if (list.includes(wordKey)) {
+      list = list.filter(w => w !== wordKey);
+    } else {
+      list.push(wordKey);
+    }
+    localStorage.setItem('bookmarked_words', JSON.stringify(list));
+    updateBookmarkBadge();
+    renderDayCards(dayOffsetView);
+  }
+
+  function updateBookmarkBadge() {
+    const count = getBookmarkedWords().length;
+    document.getElementById('savedCountBadge').textContent = count;
+  }
+
+  function updateStudyStreak() {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const lastVisit = localStorage.getItem('last_visit_date');
+    let streak = parseInt(localStorage.getItem('study_streak') || '1', 10);
+
+    if (lastVisit) {
+      const diffDays = Math.floor((new Date(todayStr) - new Date(lastVisit)) / 86400000);
+      if (diffDays === 1) {
+        streak += 1;
+        localStorage.setItem('study_streak', streak);
+      } else if (diffDays > 1) {
+        streak = 1;
+        localStorage.setItem('study_streak', streak);
+      }
+    } else {
+      localStorage.setItem('study_streak', '1');
+    }
+    localStorage.setItem('last_visit_date', todayStr);
+    document.getElementById('streakBannerText').textContent = `Daily Streak: ${streak} day${streak > 1 ? 's' : ''}`;
+  }
+
+  /* ---------------------------------------------------------
+     2. DETERMINISTIC 300-DAY ZERO-REPEAT ENGINE
+     --------------------------------------------------------- */
+  const EPOCH_DATE = new Date('2026-01-01T00:00:00Z');
+  let FULL_CURRICULUM = null;
+  let MASTER_WORD_BANK = [];
+  let dayOffsetView = 0;
+  let activeSlide = 0;
+
+  function getSystemCalculatedDayOffset() {
+    const now = new Date();
+    const utcMidnight = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+    return Math.max(0, Math.floor((utcMidnight - EPOCH_DATE) / 86400000));
+  }
+
+  function getCoprimePermutationIndex(dayNumber) {
+    return (dayNumber * 137 + 43) % 300;
+  }
+
+  async function loadCurriculum() {
+    try {
+      const res = await fetch('./data/curriculum.json');
+      FULL_CURRICULUM = await res.json();
+      
+      const currentDay = getSystemCalculatedDayOffset() % 300;
+      MASTER_WORD_BANK = [];
+
+      for (let offset = 0; offset < 30; offset++) {
+        const pastDay = (currentDay - offset + 300) % 300;
+        const pIdx = getCoprimePermutationIndex(pastDay);
+        const ageDays = offset;
+
+        MASTER_WORD_BANK.push({ ...FULL_CURRICULUM.phrases[pIdx], ageDays, dayNum: pastDay + 1 });
+        MASTER_WORD_BANK.push({ ...FULL_CURRICULUM.french[pIdx], ageDays, dayNum: pastDay + 1 });
+        MASTER_WORD_BANK.push({ ...FULL_CURRICULUM.yiddish[pIdx], ageDays, dayNum: pastDay + 1 });
+        MASTER_WORD_BANK.push({ ...FULL_CURRICULUM.latin[pIdx], ageDays, dayNum: pastDay + 1 });
+      }
+
+      renderDayCards(dayOffsetView);
+    } catch (err) {
+      console.warn("Curriculum fetch bypassed, fallback to static defaults:", err);
+    }
+  }
+
+  async function loadDailyThemeSynthesis() {
+    try {
+      const response = await fetch('./data/daily_theme.json', { cache: 'no-cache' });
+      if (!response.ok) return;
+      const data = await response.json();
+
+      document.getElementById('themeAuthorDisplay').textContent = data.author;
+      document.getElementById('themeTitleDisplay').textContent = data.themeTitle;
+      document.getElementById('themeAnalysisDisplay').textContent = data.thematicAnalysis;
+      document.getElementById('themeQuoteDisplay').textContent = `"${data.quote}"`;
+      document.getElementById('themeCitationDisplay').textContent = `— ${data.author}, ${data.work}`;
+    } catch (err) {
+      console.log('Using baseline prologue:', err);
+    }
+  }
+
+  function renderDayCards(epochDay) {
+    if (!FULL_CURRICULUM) return;
+
+    const cycleDay = epochDay % 300;
+    const pIdx = getCoprimePermutationIndex(cycleDay);
+
+    const dayData = {
+      day: cycleDay + 1,
+      phrase: FULL_CURRICULUM.phrases[pIdx],
+      french: FULL_CURRICULUM.french[pIdx],
+      yiddish: FULL_CURRICULUM.yiddish[pIdx],
+      latinWord: FULL_CURRICULUM.latin[pIdx]
+    };
+
+    const displayDate = new Date(EPOCH_DATE.getTime() + (epochDay * 86400000));
+    document.getElementById('dateDisplay').textContent = displayDate.toLocaleDateString('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+    });
+    document.getElementById('cycleDisplay').textContent = `Day ${dayData.day} of 300 • Zero Repeats`;
+
+    renderCard('slide0', dayData.phrase, 0, 'French Word ➔', 1);
+    renderCard('slide1', dayData.french, 1, 'Yiddish Word ➔', 2);
+    renderCard('slide2', dayData.yiddish, 2, 'Latin Word ➔', 3);
+    renderCard('slide3', dayData.latinWord, 3, 'Master Quiz ➔', 4);
+    updateBookmarkBadge();
+  }
+
+  function renderCard(slideId, item, cardIdx, nextLabel, nextSlideIdx) {
+    const wordKey = item.w;
+    const bookmarked = isBookmarked(wordKey);
+    const prevBtn = cardIdx > 0 
+      ? `<button class="deck-arrow-btn" onclick="goToSlide(${cardIdx - 1})">◀ Back</button>` 
+      : `<div></div>`;
+
+    document.getElementById(slideId).innerHTML = `
+      <div class="card-badge-row">
+        <span class="badge-category">${item.cat}</span>
+        <div class="card-actions-right">
+          <button class="star-btn ${bookmarked ? 'bookmarked' : ''}" 
+                  onclick="toggleBookmark('${wordKey}')" 
+                  aria-label="Bookmark term">
+            ${bookmarked ? '★' : '☆'}
+          </button>
+          <span class="slide-step-tag">Card ${cardIdx + 1} of 5</span>
+        </div>
+      </div>
+      <div class="term-headline-box">
+        <div class="term-title-row">
+          <div>
+            <span class="term-primary">${wordKey}</span>
+            ${item.script ? `<span class="term-original-script">${item.script}</span>` : ''}
+          </div>
+          <button class="speak-btn" onclick="speakWord('${wordKey}', '${item.lang}')">🔊</button>
+        </div>
+        <div class="phonetic-row">
+          <span class="ipa-pill" onclick='openModal(${JSON.stringify(wordKey)}, ${JSON.stringify(item.mou)})'>
+            <span>👄</span> ${item.ipa}
+          </span>
+        </div>
+      </div>
+      <div class="definition-grid">
+        <div class="def-card">
+          <div class="def-label">Literal Meaning</div>
+          <div class="def-text">${item.lit}</div>
+        </div>
+        <div class="def-card english">
+          <div class="def-label">English Practical Use</div>
+          <div class="def-text">${item.eng}</div>
+        </div>
+      </div>
+      <div class="semantic-card">
+        <div class="semantic-heading"><span>⏳</span> Semantic Shift</div>
+        <div class="semantic-body">${item.shift}</div>
+      </div>
+      <div class="lineage-wrapper">
+        <div class="lineage-title">Vertical Etymology Lineage</div>
+        <div class="vertical-timeline">
+          ${item.lin.map((node, i) => `
+            <div class="timeline-node">
+              <span class="node-stage">${['Origin', 'Classical', 'Development', 'Modern'][i] || 'Stage'}</span>
+              <span class="node-form">${node}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <div class="deck-nav-footer">
+        ${prevBtn}
+        <button class="deck-arrow-btn primary" onclick="goToSlide(${nextSlideIdx})">${nextLabel}</button>
+      </div>
+    `;
+  }
+
+  function goToSlide(idx) {
+    triggerHaptic('tap');
+    activeSlide = Math.max(0, Math.min(4, idx));
+    document.getElementById('sliderTrack').style.transform = `translateX(-${activeSlide * 20}%)`;
+    document.querySelectorAll('.progress-pill').forEach((p, i) => {
+      p.classList.toggle('active', i === activeSlide);
+    });
+  }
+
+  function stepDay(d) {
+    triggerHaptic('tap');
+    dayOffsetView += d;
+    renderDayCards(dayOffsetView);
+  }
+
+  function jumpToday() {
+    triggerHaptic('tap');
+    dayOffsetView = getSystemCalculatedDayOffset();
+    renderDayCards(dayOffsetView);
+    goToSlide(0);
+  }
+
+  /* ---------------------------------------------------------
+     3. NATIVE AUDIO ENGINE
+     --------------------------------------------------------- */
+  let systemVoices = [];
+  function populateVoices() {
+    if ('speechSynthesis' in window) {
+      systemVoices = window.speechSynthesis.getVoices();
+    }
+  }
+  if ('speechSynthesis' in window) {
+    speechSynthesis.onvoiceschanged = populateVoices;
+  }
+
+  function initNativeAudio() {
+    triggerHaptic('tap');
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance('Audio initialized');
+      u.volume = 0.2;
+      u.rate = 1.0;
+      window.speechSynthesis.speak(u);
+      const b = document.getElementById('initAudioBtn');
+      b.textContent = 'Audio Ready ✓';
+      b.classList.add('initialized');
+      populateVoices();
+    }
+  }
+
+  function speakWord(text, lang) {
+    triggerHaptic('tap');
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+
+    const clean = text.replace(/[\(\/שמועסחוצפּהמענטשקלאָץקוועלןנאַשןבאָבקעסמבֿיןבאַלעבאָסטע#0-9]/g, '').trim();
+    const u = new SpeechSynthesisUtterance(clean);
+    u.rate = 0.82;
+
+    if (lang === 'fr-FR') {
+      u.voice = systemVoices.find(v => v.lang.startsWith('fr'));
+      u.lang = 'fr-FR';
+    } else if (lang === 'de-DE' || lang === 'yi') {
+      u.voice = systemVoices.find(v => v.lang.startsWith('de')) || systemVoices.find(v => v.lang.startsWith('en'));
+      u.lang = 'de-DE';
+    } else {
+      u.voice = systemVoices.find(v => v.lang.startsWith('it')) || systemVoices.find(v => v.lang.startsWith('es'));
+      u.lang = 'la';
+    }
+    window.speechSynthesis.speak(u);
+  }
+
+  function openModal(title, mouthings) {
+    triggerHaptic('tap');
+    document.getElementById('modalTermTitle').textContent = `Mouth Articulation • ${title}`;
+    document.getElementById('modalSyllableList').innerHTML = (mouthings || []).map(m => `
+      <div class="syllable-card">
+        <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+          <span class="syl-text">${m.syl}</span>
+          <span class="syl-ipa">${m.ipa}</span>
+        </div>
+        <div class="syl-mouth">${m.mouth}</div>
+      </div>
+    `).join('');
+    document.getElementById('mouthingsModal').style.display = 'flex';
+  }
+
+  function openBookmarkRepository() {
+    triggerHaptic('tap');
+    const container = document.getElementById('repoItemsContainer');
+    const bookmarked = getBookmarkedWords();
+
+    if (bookmarked.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 30px 10px; color: var(--text-sub);">
+          <div style="font-size: 32px; margin-bottom: 8px;">☆</div>
+          <div style="font-size: 14px; font-weight: 600; color: var(--text-muted);">No Bookmarked Words Yet</div>
+          <div style="font-size: 12px; margin-top: 4px;">Tap the star icon on any card to prioritize it in upcoming quizzes.</div>
+        </div>
+      `;
+    } else {
+      const savedItems = MASTER_WORD_BANK.filter(item => bookmarked.includes(item.w));
+      container.innerHTML = savedItems.map(item => `
+        <div class="repo-item-card">
+          <div class="repo-item-head">
+            <div>
+              <span class="repo-item-word">${item.w}</span>
+              <span style="font-size: 10px; color: var(--accent-violet-light); margin-left: 6px; text-transform: uppercase;">${item.cat}</span>
+            </div>
+            <div class="repo-item-actions">
+              <button class="repo-speak-sm" onclick="speakWord('${item.w}', '${item.lang}')">🔊</button>
+              <button class="repo-trash-btn" onclick="toggleBookmark('${item.w}'); openBookmarkRepository();">✕</button>
+            </div>
+          </div>
+          <div class="repo-def"><strong>Use:</strong> ${item.eng}</div>
+        </div>
+      `).join('');
+    }
+
+    document.getElementById('bookmarksModal').style.display = 'flex';
+  }
+
+  function closeModal(e) {
+    if (!e || e.target.classList.contains('modal-overlay') || e.target.classList.contains('sheet-close-btn')) {
+      document.getElementById('mouthingsModal').style.display = 'none';
+      document.getElementById('bookmarksModal').style.display = 'none';
+    }
+  }
+
+  /* ---------------------------------------------------------
+     4. WEIGHTED 30-DAY QUIZ (BOOKMARK PRIORITY ENGINE)
+     --------------------------------------------------------- */
+  let quizQuestions = [];
+  let currentQIdx = 0;
+  let qScore = 0;
+
+  function startCompoundingQuiz() {
+    triggerHaptic('tap');
+    document.getElementById('quizIntroCard').style.display = 'none';
+    document.getElementById('quizSummaryCard').style.display = 'none';
+    document.getElementById('quizActiveCard').style.display = 'flex';
+    currentQIdx = 0;
+    qScore = 0;
+    quizQuestions = generateSpacedQuiz(25);
+    renderQuestion(0);
+  }
+
+  function generateSpacedQuiz(count) {
+    const bookmarkedSet = new Set(getBookmarkedWords());
+    const pool = [];
+
+    MASTER_WORD_BANK.forEach(item => {
+      let weight = 1;
+      if (item.ageDays >= 22) weight = 4;
+      else if (item.ageDays >= 15) weight = 3;
+      else if (item.ageDays >= 8) weight = 2;
+
+      if (bookmarkedSet.has(item.w)) {
+        weight *= 6;
+      }
+
+      for (let i = 0; i < weight * 2; i++) {
+        pool.push(item);
+      }
+    });
+
+    const chosen = [];
+    const used = new Set();
+    while (chosen.length < count && pool.length > 0) {
+      const idx = Math.floor(Math.random() * pool.length);
+      const c = pool[idx];
+      if (!used.has(c.w)) {
+        used.add(c.w);
+        chosen.push(c);
+      }
+      pool.splice(idx, 1);
+    }
+
+    const types = ['audio', 'definition', 'lineage', 'practical'];
+    return chosen.map((target, i) => buildQuestion(target, types[i % types.length]));
+  }
+
+  function buildQuestion(target, type) {
+    const isStarred = isBookmarked(target.w);
+    const distractors = MASTER_WORD_BANK
+      .filter(w => w.w !== target.w)
+      .sort(() => 0.5 - Math.random())
+      .slice(0, 3);
+
+    let prompt = "";
+    let options = [];
+    let feedback = "";
+
+    if (type === 'audio') {
+      prompt = "Listen to pronunciation and identify the correct lexical definition:";
+      options = [
+        { text: target.lit, correct: true },
+        { text: distractors[0].lit, correct: false },
+        { text: distractors[1].lit, correct: false },
+        { text: distractors[2].lit, correct: false }
+      ].sort(() => 0.5 - Math.random());
+      feedback = `"${target.w}" translates literally as: "${target.lit}". Modern practical use: ${target.eng}`;
+    } else if (type === 'definition') {
+      prompt = `Which term denotes: "${target.eng}"?`;
+      options = [
+        { text: target.w, correct: true },
+        { text: distractors[0].w, correct: false },
+        { text: distractors[1].w, correct: false },
+        { text: distractors[2].w, correct: false }
+      ].sort(() => 0.5 - Math.random());
+      feedback = `Correct: "${target.w}". Literal translation: "${target.lit}".`;
+    } else if (type === 'lineage') {
+      const r = target.lin[0];
+      prompt = `Identify the ancestral linguistic root for "${target.w}":`;
+      options = [
+        { text: r, correct: true },
+        { text: distractors[0].lin[0], correct: false },
+        { text: distractors[1].lin[0], correct: false },
+        { text: distractors[2].lin[0], correct: false }
+      ].sort(() => 0.5 - Math.random());
+      feedback = `Ancestral root: ${r}. Full trajectory: ${target.lin.join(' ➔ ')}`;
+    } else {
+      prompt = `In modern discourse, which term applies to: "${target.eng}"?`;
+      options = [
+        { text: target.w, correct: true },
+        { text: distractors[0].w, correct: false },
+        { text: distractors[1].w, correct: false },
+        { text: distractors[2].w, correct: false }
+      ].sort(() => 0.5 - Math.random());
+      feedback = `Context match: "${target.w}". Historical shift: ${target.shift}`;
+    }
+
+    return { target, type, prompt, options, feedback, isStarred };
+  }
+
+  function renderQuestion(idx) {
+    const q = quizQuestions[idx];
+    document.getElementById('quizProgressNum').textContent = `Question ${idx + 1} of ${quizQuestions.length}`;
+    document.getElementById('quizScoreNum').textContent = `Score: ${qScore} / ${idx}`;
+
+    const badge = document.getElementById('quizTypeBadge');
+    const starBadge = document.getElementById('quizStarBadge');
+    const audioBox = document.getElementById('quizAudioWrapper');
+
+    starBadge.style.display = q.isStarred ? 'inline-flex' : 'none';
+
+    if (q.type === 'audio') {
+      badge.innerHTML = `<span>🎧</span> Audio Clue`;
+      audioBox.style.display = 'flex';
+      document.getElementById('quizPlayAudioBtn').onclick = () => speakWord(q.target.w, q.target.lang);
+      speakWord(q.target.w, q.target.lang);
+    } else {
+      badge.innerHTML = q.type === 'definition' ? `<span>📖</span> Definition Match` : (q.type === 'lineage' ? `<span>🌳</span> Root Lineage` : `<span>💼</span> Practical English`);
+      audioBox.style.display = 'none';
+    }
+
+    document.getElementById('quizPromptText').textContent = q.prompt;
+    document.getElementById('quizOptionsList').innerHTML = q.options.map((opt, oIdx) => `
+      <button class="q-opt" onclick="selectAnswer(${oIdx})">${opt.text}</button>
+    `).join('');
+
+    document.getElementById('quizFeedbackBox').style.display = 'none';
+    document.getElementById('quizNextBtn').style.display = 'none';
+  }
+
+  function selectAnswer(chosenIdx) {
+    const q = quizQuestions[currentQIdx];
+    const buttons = document.querySelectorAll('.q-opt');
+    buttons.forEach((btn, idx) => {
+      btn.classList.add('locked');
+      if (q.options[idx].correct) btn.classList.add('correct');
+    });
+
+    if (q.options[chosenIdx].correct) {
+      triggerHaptic('success');
+      qScore++;
+    } else {
+      triggerHaptic('error');
+      buttons[chosenIdx].classList.add('wrong');
+    }
+
+    document.getElementById('quizScoreNum').textContent = `Score: ${qScore} / ${currentQIdx + 1}`;
+    const fb = document.getElementById('quizFeedbackBox');
+    fb.textContent = q.feedback;
+    fb.style.display = 'block';
+
+    const nextBtn = document.getElementById('quizNextBtn');
+    nextBtn.style.display = 'block';
+    nextBtn.textContent = currentQIdx === quizQuestions.length - 1 ? 'View Final Results ➔' : 'Next Question ➔';
+  }
+
+  function nextQuizQuestion() {
+    triggerHaptic('tap');
+    currentQIdx++;
+    if (currentQIdx < quizQuestions.length) renderQuestion(currentQIdx);
+    else showSummary();
+  }
+
+  function showSummary() {
+    document.getElementById('quizActiveCard').style.display = 'none';
+    const sumCard = document.getElementById('quizSummaryCard');
+    sumCard.style.display = 'flex';
+    document.getElementById('summaryScore').textContent = `${qScore} / ${quizQuestions.length}`;
+    const pct = Math.round((qScore / quizQuestions.length) * 100);
+    document.getElementById('summaryTier').textContent = pct >= 80 ? 'Master Polyglot' : (pct >= 60 ? 'Classical Scholar' : 'Apprentice');
+    document.getElementById('summaryBreakdown').textContent = `Retention accuracy: ${pct}%. Starred words sampled with heavy 6× repetition weighting.`;
+  }
+
+  /* ---------------------------------------------------------
+     5. SWIPE GESTURES & SYSTEM INITIALIZATION
+     --------------------------------------------------------- */
+  let touchX = 0, touchY = 0;
+  const vp = document.getElementById('sliderViewport');
+  vp.addEventListener('touchstart', (e) => {
+    touchX = e.changedTouches[0].screenX;
+    touchY = e.changedTouches[0].screenY;
+  }, { passive: true });
+  vp.addEventListener('touchend', (e) => {
+    const diffX = e.changedTouches[0].screenX - touchX;
+    const diffY = e.changedTouches[0].screenY - touchY;
+    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 48) {
+      if (diffX < 0) goToSlide(activeSlide + 1);
+      else goToSlide(activeSlide - 1);
+    }
+  }, { passive: true });
+
+  window.addEventListener('load', async () => {
+    dayOffsetView = getSystemCalculatedDayOffset();
+    updateStudyStreak();
+    await loadCurriculum();
+    await loadDailyThemeSynthesis();
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(err => console.log('SW register bypassed:', err));
+    }
+  });
+</script>
+
+</body>
+</html>
