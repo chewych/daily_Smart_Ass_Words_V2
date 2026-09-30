@@ -1,0 +1,50 @@
+name: Generate Daily Thematic Synthesis
+
+on:
+  schedule:
+    # 00:05 UTC every day
+    - cron: '5 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  synthesize:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          pip install google-genai
+
+      - name: Build Curriculum if Missing
+        run: |
+          if [ ! -f data/curriculum.json ]; then
+            python scripts/build_curriculum.py
+          fi
+
+      - name: Run Thematic Synthesis Bot
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python scripts/generate_theme.py
+
+      - name: Commit and Push Generated Files
+        run: |
+          git config --global user.name "DailyLangBot"
+          git config --global user.email "bot@dailylang.internal"
+          git add data/curriculum.json data/daily_theme.json
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Auto-generate daily assets: $(date +'%Y-%m-%d')"
+            git push origin main
+          fi
